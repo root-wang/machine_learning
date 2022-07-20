@@ -16,6 +16,9 @@ class NeuralNetworkNeuronsHidden(NeuralNetworkNeurons):
 
     def __init__(self, value=0, backend_weights=None, *kargs, **kwargs):
         super(NeuralNetworkNeuronsHidden, self).__init__(value)
-        self.backend_weights = backend_weights
+        self.backend_weights = np.mat(backend_weights)
         # print(self.value)
         # print(self.backend_weights)
+
+    def get_backend_weights(self):
+        return self.backend_weights
