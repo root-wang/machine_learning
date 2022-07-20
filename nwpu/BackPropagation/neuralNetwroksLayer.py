@@ -1,8 +1,8 @@
 #  神经网络层
 import numpy as np
-import nwpu.BackPropagation.utils.sigmoid as sigmoid
+from nwpu.BackPropagation.utils.sigmoid import sigmoid_fun
 
-
+ 
 class NeuralNetworksLayer:
     def __init__(self, neurons_num, layer_num, neural_network_neurons):
         self.neurons_num = neurons_num  # 该层的神经元数
@@ -15,7 +15,7 @@ class NeuralNetworksLayer:
         parameter = self.get_parameter_mat()
         net = np.matmul(value, parameter)
 
-        return sigmoid.sigmoid_fun(net)
+        return sigmoid_fun(net)
 
     def get_parameter_mat(self):
         parameters_list = []
@@ -30,17 +30,25 @@ class NeuralNetworksLayer:
 
         return parameters_mat
 
-    def get_value_mat(self):
+    def get_value_mat(self, need_bias=True):
         value_list = []
 
         for neuron in self.neural_network_neurons:
             value_list.append(neuron.get_value())
 
         #  每一层加入偏差1
-        value_list.append(1)
+        if need_bias:
+            value_list.append(1)
 
-        value_mat = np.array(value_list)
+        value_mat = np.mat(np.array(value_list))
         return value_mat
 
     def set_neural_network_neurons(self, neural_network_neurons):
         self.neural_network_neurons = neural_network_neurons
+
+    def set_neural_network_neurons_value(self, input_value):
+        for i in range(self.neurons_num):
+            self.neural_network_neurons[i].set_value(input_value[0, i])
+
+    def update_parameter_mat(self, parameter_mat):
+        pass
