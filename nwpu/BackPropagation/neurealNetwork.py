@@ -3,72 +3,57 @@ import numpy as np
 
 from nwpu.BackPropagation.neuralNetwroksLayer import NeuralNetworksLayer
 from nwpu.BackPropagation.neuralNetworkNeurons import NeuralNetworkNeurons
-import nwpu.BackPropagation.utils.derivative_sigmoid as ds
+
+from nwpu.BackPropagation.utils.derivative_sigmoid import derivative_sigmoid_fun
 
 
 class NeuralNetworks:
     LEARNING_RATE = 0.001
 
-    def __init__(self, inputs, outputs, weights_list):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.feature_nums = inputs.shape[1]
-        self.output_nums = outputs.shape[1]
-        self.weight_layer_nums: int = len(weights_list)  # 参数矩阵数 也是需要进行神经元计算的层数
-        self.weights_list = weights_list
-        self.predict = np.empty_like(self.outputs)
-        self.layers = self.create_layer()
-
-    # 忽略输入创建一个初始化的网络
-    # 主要初始化参数矩阵 网络层数 神经元参数矩阵 隐藏层 输出层
-    def create_layer(self):
-        layers = []
-
-        for i in range(len(self.weights_list)):
-            weight = self.weights_list[i]
-            # 根据权重矩阵得出该层和上一层的神经元数
-            front_neural_nums, neural_nums = weight.shape
-            neurons_list = []
-            for k in range(front_neural_nums):
-                neuron = NeuralNetworkNeurons(0)
-                neurons_list.append(neuron)
-            layer = NeuralNetworksLayer(neural_nums, neurons_list, weight)
-            layers.append(layer)
-
-            #     生成输出层
-            neurons_list = []
-            for k in range(self.output_nums):
-                neuron = NeuralNetworkNeurons(0)
-                neurons_list.append(neuron)
-            layer = NeuralNetworksLayer(self.output_nums, neurons_list, None)
-            layers.append(layer)
-        return layers
+    def __init__(self):
+        self.layer_nums = 0
+        self.layers = []
 
     # 计算一个样本的预测值
-    def calculate_layer_out(self):
-        for i in range(0, self.weight_layer_nums):
-            update_value = self.layers[i].calculate()
-            self.layers[i + 1].set_neural_network_neurons_value(update_value)
-        return self.layers[self.weight_layer_nums].get_value_mat(need_bias=False)
+    def calculate_output(self, x):
+        update_value = x
+        for i in range(self.layer_nums):
+            update_value = self.layers[i].calculate(update_value)
+            self.layers[i].set_neural_network_neurons_value(update_value)
+        return self.layers[-1].get_value_mat()
 
-    # 计算输出层的误差
-    def calculate_output_error(self):
-        return self.predict - np.array(self.outputs)
+    def add_layer(self, input_num, neuron_num, activation):
+        neuron_list = []
+        for i in range(neuron_num):
+            neuron = NeuralNetworkNeurons(np.random.rand())
+            neuron_list.append(neuron)
 
-    # 使用误差计算hidden layer 误差
-    def calculate_hidden_error(self):
-        pass
+        layer = NeuralNetworksLayer(input_num, neuron_list, activation)
+        self.layer_nums = self.layer_nums + 1
+        self.layers.append(layer)
 
-    def init_network_input(self, input_value):
-        self.layers[0].set_neural_network_neurons_value(input_value)
+    def backpropagation(self, x, y, learning_rate=None):
+        output = self.calculate_output(x)
+        print(output)
+        for i in reversed(range(self.layer_nums)):
+            layer = self.layers[i]
+            if layer is self.layers[-1]:
+                layer.error = output - y
+                layer.delta = layer.error
+            else:
+                next_layer = self.layers[i + 1]
+                layer.error = np.dot(layer.get_parameter(), next_layer.delta)
+                layer.delta = np.multiply(layer.error, derivative_sigmoid_fun(
+                    layer.get_value_mat()))
+        for i in range(self.layer_nums):
+            layer = self.layers[i]
+            layer_output = x if i is 0 else self.layers[i - 1].get_value_mat()
+            parameter = layer.get_parameter()
+            delta = layer.delta
+            update_parameter = parameter - np.multiply(learning_rate, np.dot(delta, layer_output.T))
+            layer.set_parameter(update_parameter)
 
-    def train_network(self):
-        # 输入样本数
-        samples_num = self.inputs.shape[1]
-        for i in range(samples_num):
-            # 该样本的数据
-            input_value = self.inputs[:, i]
-            # 样本数据代入网络输入层 并进行计算
-            self.init_network_input(input_value)
-            self.predict[:, i] = self.calculate_layer_out()
-            print(self.predict)
+    def train_network(self, x_train, y_train, max_epochs, learning_rate):
+        for i in range(max_epochs):
+            for j in range(len(x_train)):
+                self.backpropagation(x_train[j], y_train[j], learning_rate)
